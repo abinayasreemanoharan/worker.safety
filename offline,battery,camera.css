@@ -1,0 +1,266 @@
+
+const SITEGUARD_API = "http://127.0.0.1:5000";
+const QUEUE_KEY = "siteguard_pending_reports";
+
+// Compress image to reduce offline storage usage
+function compressPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error("Could not read photo"));
+
+    reader.onload = () => {
+      const img = new Image();
+
+      img.onerror = () => reject(new Error("Invalid image"));
+      img.onload = () => {
+        const scale = Math.min(1, 1280 / img.width);
+        const canvas = document.createElement("canvas");
+
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        resolve(canvas.toDataURL("image/jpeg", 0.65));
+      };
+
+      img.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+// Preview selected/captured photo
+document.getElementById("sosPhoto")?.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  const preview = document.getElementById("sosPreview");
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Please select an image.");
+    e.target.value = "";
+    return;
+  }
+
+  try {
+    preview.src = await compressPhoto(file);
+    preview.hidden = false;
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+// Save pending reports on this device
+function getPendingReports() {
+  try {
+    return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function savePendingReports(reports) {
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(reports));
+  updateConnectionStatus();
+}
+
+// Update connectivity indicator
+function updateConnectionStatus() {
+  const connection = document.getElementById("connectionStatus");
+  const sync = document.getElementById("syncStatus");
+
+  if (connection) {
+    connection.textContent = navigator.onLine
+      ? "🟢 Internet connection available"
+      : "🟠 Offline mode — reports will queue on this device";
+  }
+
+  if (sync) {
+    sync.textContent = "Pending reports: " + getPendingReports().length;
+  }
+}
+
+// Submit SOS report or queue it while offline
+async function sendSOSWithPhoto() {
+  const result = document.getElementById("sosResult");
+  const photo = document.getElementById("sosPreview");
+  const workerId =
+    document.getElementById("workerId")?.value.trim() || "W-104";
+  const location =
+    document.getElementById("workerLocation")?.value.trim() || "Unknown";
+
+  try {
+    let photoData = "";
+
+    if (photo && !photo.hidden && photo.src.startsWith("data:image/")) {
+      photoData = photo.src;
+    }
+
+    const report = {
+      worker_id: workerId,
+      location: location,
+      photo: photoData,
+      created_at: new Date().toISOString(),
+      status: "Pending"
+    };
+
+    // Keep the report locally if internet is unavailable
+    if (!navigator.onLine) {
+      const pending = getPendingReports();
+      pending.push(report);
+      savePendingReports(pending);
+
+      result.textContent =
+        "Offline: emergency report saved on this device. It is NOT sent yet.";
+      return;
+    }
+
+    await submitReport(report);
+
+    result.textContent =
+      "Emergency report submitted to the configured backend.";
+    if (typeof loadDashboard === "function") await loadDashboard();
+
+  } catch (error) {
+    // Queue when the server is unreachable, even if internet appears available
+    try {
+      const pending = getPendingReports();
+      pending.push({
+        worker_id: workerId,
+        location: location,
+        photo: photo?.hidden ? "" : (photo?.src || ""),
+        created_at: new Date().toISOString(),
+        status: "Pending"
+      });
+      savePendingReports(pending);
+
+      result.textContent =
+        "Server unavailable: report queued locally. Not yet delivered.";
+    } catch {
+      result.textContent =
+        "Could not save the report. Please call emergency services directly.";
+    }
+  }
+}
+
+// Send report and image to Flask backend
+async function submitReport(report) {
+  const form = new FormData();
+
+  form.append("worker_id", report.worker_id);
+  form.append("location", report.location);
+
+  if (report.photo) {
+    const response = await fetch(report.photo);
+    const blob = await response.blob();
+    form.append("photo", blob, "incident.jpg");
+  }
+
+  const response = await fetch(SITEGUARD_API + "/api/sos-with-photo", {
+    method: "POST",
+    body: form
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Report submission failed");
+  }
+
+  return data;
+}
+
+// Retry queued reports when internet returns
+let syncing = false;
+
+async function syncPendingReports() {
+  if (!navigator.onLine || syncing) return;
+
+  syncing = true;
+  const pending = getPendingReports();
+
+  try {
+    while (pending.length > 0 && navigator.onLine) {
+      // Remove from queue only after backend confirms receipt
+      await submitReport(pending[0]);
+      pending.shift();
+      savePendingReports(pending);
+    }
+  } catch (error) {
+    console.log("Sync paused:", error.message);
+  } finally {
+    syncing = false;
+    updateConnectionStatus();
+  }
+}
+
+window.addEventListener("online", syncPendingReports);
+window.addEventListener("offline", updateConnectionStatus);
+
+updateConnectionStatus();
+
+// Device battery information — supported browsers only
+async function setupBatteryStatus() {
+  const text = document.getElementById("batteryStatus");
+  const bar = document.getElementById("batteryLevel");
+  const advice = document.getElementById("powerAdvice");
+
+  if (!navigator.getBattery) {
+    text.textContent = "Battery details are not supported by this browser.";
+    return;
+  }
+
+  try {
+    const battery = await navigator.getBattery();
+
+    function refreshBattery() {
+      const percent = Math.round(battery.level * 100);
+
+      text.textContent =
+        "Battery: " + percent + "% · " +
+        (battery.charging ? "Charging" : "Not charging");
+
+      bar.style.width = percent + "%";
+
+      bar.style.background =
+        percent <= 20 ? "#ff5c82" :
+        percent <= 50 ? "#ffd166" : "#43edb0";
+
+      advice.textContent = percent <= 20 && !battery.charging
+        ? "Low battery: connect a charger or UPS soon."
+        : "Keep the device charged for continued operation.";
+    }
+
+    battery.addEventListener("levelchange", refreshBattery);
+    battery.addEventListener("chargingchange", refreshBattery);
+    refreshBattery();
+
+  } catch {
+    text.textContent = "Battery information is unavailable.";
+  }
+}
+
+setupBatteryStatus();
+
+// User-initiated emergency call; works on compatible devices
+function callEmergencyServices() {
+  window.location.href = "tel:112";
+}
+
+// Register offline cache
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js")
+      .catch(error => console.log("Offline cache unavailable:", error));
+  });
+}
+
+// Try syncing previously saved reports on app load
+syncPendingReports();
+
+
+   
