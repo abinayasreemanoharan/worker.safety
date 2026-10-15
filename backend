@@ -1,0 +1,48 @@
+
+const API = "http://127.0.0.1:5000";
+
+async function apiRequest(path, method = "GET", data = null) {
+  const options = { method, headers: {} };
+
+  if (data !== null) {
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(API + path, options);
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "API request failed");
+  }
+
+  return result;
+}
+
+async function loadDashboard() {
+  try {
+    const data = await apiRequest("/api/dashboard");
+
+    document.getElementById("openCount").textContent =
+      data.open_incidents;
+
+    document.getElementById("risk").textContent =
+      data.risk_score + "/100";
+
+    document.getElementById("riskDetail").textContent =
+      data.risk_score + "/100";
+
+    document.getElementById("riskBar").style.width =
+      data.risk_score + "%";
+
+    document.getElementById("riskMessage").textContent =
+      data.risk_level + " RISK";
+
+    console.log("Backend connected!", data);
+  } catch (error) {
+    console.error(error);
+    alert("Backend connect aagala. First app.py run pannu.");
+  }
+}
+
+loadDashboard();
