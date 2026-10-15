@@ -1,0 +1,53 @@
+
+<!-- Emergency Camera -->
+<section class="card">
+  <h2>🚨 Emergency SOS</h2>
+  <p>Capture an incident photo and submit an emergency report.</p>
+
+  <label for="sosPhoto">Capture or select a photo</label>
+  <input
+    type="file"
+    id="sosPhoto"
+    accept="image/*"
+    capture="environment"
+  />
+
+  <img
+    id="sosPreview"
+    alt="Emergency incident preview"
+    hidden
+    style="width:100%;max-width:360px;margin:12px 0;"
+  />
+
+  <label for="workerId">Worker ID</label>
+  <input id="workerId" value="W-104" />
+
+  <label for="workerLocation">Location / site area</label>
+  <input id="workerLocation" placeholder="Enter site area or location" />
+
+  <button type="button" onclick="sendSOSWithPhoto()">
+    🚨 Send Emergency Report
+  </button>
+
+  <button type="button" onclick="callEmergencyServices()">
+    📞 Call Emergency Services (112)
+  </button>
+
+  <p id="sosResult" role="status">No emergency report submitted.</p>
+</section>
+
+<!-- Offline and battery indicators -->
+<div class="card">
+  <h3>📡 Connectivity</h3>
+  <p id="connectionStatus">Checking connection...</p>
+  <p id="syncStatus">Pending reports: 0</p>
+</div>
+
+<div class="card">
+  <h3>🔋 Device Battery</h3>
+  <p id="batteryStatus">Checking battery status...</p>
+  <div class="battery-track">
+    <div id="batteryLevel"></div>
+  </div>
+  <p id="powerAdvice">Battery information depends on browser support.</p>
+</div>
