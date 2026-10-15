@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiteGuard AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🦺 SiteGuard AI</h1>
+    <p>Worker Safety Alert System</p>
+    <span class="live">● DEMO MONITORING</span>
+  </header>
+
+  <nav>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#ppe">PPE Checker</a>
+    <a href="#zones">Danger Zones</a>
+    <a href="#sos">Emergency SOS</a>
+    <a href="#incidents">Incidents</a>
+  </nav>
+
+  <main>
+    <section id="dashboard">
+      <h2>Safety Dashboard</h2>
+      <div class="cards">
+        <article class="card">
+          <h3>Workers on Site</h3>
+          <p class="number">48</p>
+        </article>
+        <article class="card">
+          <h3>Open Incidents</h3>
+          <p class="number" id="openCount">0</p>
+        </article>
+        <article class="card">
+          <h3>Site Risk Score</h3>
+          <p class="number" id="risk">10/100</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="ppe" class="panel">
+      <h2>1. PPE Safety Checker</h2>
+      <p>Upload a worker image for the demo preview.</p>
+      <input type="file" id="workerImage" accept="image/*">
+      <img id="preview" alt="Worker image preview">
+      <button onclick="checkPPE()">Run PPE Demo</button>
+      <p id="ppeResult">Waiting for demo check...</p>
+    </section>
+
+    <section id="zones" class="panel">
+      <h2>2. Dangerous Zone Alert</h2>
+      <p>Simulated construction site zones</p>
+      <div class="site-map">
+        <div class="safe-zone">SAFE ZONE</div>
+        <div class="danger-zone">⚠ CRANE ZONE</div>
+        <div class="danger-zone excavation">⚠ EXCAVATION</div>
+        <div id="worker">👷 Worker W-104</div>
+      </div>
+      <button onclick="zoneAlert()">Simulate Zone Entry</button>
+      <p id="zoneResult">Worker is in the safe zone.</p>
+    </section>
+
+    <section id="sos" class="panel">
+      <h2>3. Worker Emergency SOS</h2>
+      <p>Worker ID: W-104</p>
+      <p>Location: <span id="location">Safe Zone A</span></p>
+      <button class="sos" onclick="sendSOS()">🚨 SEND SOS</button>
+      <p id="sosResult">No active emergency.</p>
+      <button onclick="resolveSOS()">Resolve Emergency</button>
+    </section>
+
+    <section class="panel">
+      <h2>4. Smart Risk Assessment</h2>
+      <p>Risk score: <strong id="riskDetail">10/100</strong></p>
+      <div class="progress">
+        <div id="riskBar"></div>
+      </div>
+      <p id="riskMessage">Low risk — continue routine monitoring.</p>
+    </section>
+
+    <section id="incidents" class="panel">
+      <h2>5. Incident History & Action Plan</h2>
+      <button onclick="exportCSV()">Export CSV Report</button>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Incident</th>
+              <th>Priority</th>
+              <th>Action</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="incidentList"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    SiteGuard AI | Software Prototype | Simulated Safety Data
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>
