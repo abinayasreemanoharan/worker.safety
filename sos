@@ -1,0 +1,17 @@
+
+async function sendSOS() {
+  try {
+    const result = await apiRequest("/api/sos", "POST", {
+      worker_id: "W-104",
+      location: "Safe Zone A"
+    });
+
+    document.getElementById("sosResult").textContent =
+      result.message + " (Demo only)";
+
+    await loadDashboard();
+    alert("SOS demo incident database-la save aagiduchu!");
+  } catch (error) {
+    alert(error.message);
+  }
+}
